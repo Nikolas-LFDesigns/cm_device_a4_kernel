@@ -611,11 +611,7 @@ static int __devinit hs_probe(struct platform_device *pdev)
 	if (!hs)
 		return -ENOMEM;
 
-#ifdef CONFIG_CYANOGENMOD
 	hs->sdev.name	= "acer-hs";
-#else
-	hs->sdev.name	= "h2w";
-#endif
 	hs->sdev.print_name = msm_headset_print_name;
 
 	rc = switch_dev_register(&hs->sdev);

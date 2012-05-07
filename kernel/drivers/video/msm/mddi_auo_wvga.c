@@ -486,3 +486,4 @@ static int __init mddi_auo_init(void)
 }
 
 module_init(mddi_auo_init);
+

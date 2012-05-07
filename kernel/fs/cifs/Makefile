@@ -1,7 +1,9 @@
 #
 # Makefile for Linux CIFS VFS client 
 #
-obj-$(CONFIG_CIFS) += cifs.o
+
+
+obj-$(CONFIG_CIFS) += cifs.o slow-work.o
 
 cifs-y := cifsfs.o cifssmb.o cifs_debug.o connect.o dir.o file.o inode.o \
 	  link.o misc.o netmisc.o smbdes.o smbencrypt.o transport.o asn1.o \

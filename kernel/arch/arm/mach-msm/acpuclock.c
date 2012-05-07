@@ -32,7 +32,7 @@
 #include <mach/board.h>
 #include <mach/msm_iomap.h>
 #include <asm/mach-types.h>
-#include <mach/socinfo.h>
+/*#include <mach/socinfo.h>*/
 
 #include "proc_comm.h"
 #include "smd_private.h"

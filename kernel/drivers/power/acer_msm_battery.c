@@ -16,7 +16,7 @@
  *
  */
 
-#define DEBUG 1
+#define DEBUG 0
 
 #include <linux/slab.h>
 #include <linux/earlysuspend.h>
@@ -45,6 +45,8 @@
 
 #if DEBUG
 #define db_msg(x...) do {pr_info(x); } while (0)
+#else
+#define db_msg(x...) do {} while (0)
 #endif
 
 #define BATTERY_RPC_PROG	0x30000089
@@ -663,9 +665,7 @@ static void (*battery_isr_hander)(unsigned int flag);
 
 void batt_module_enable(int module, bool state)
 {
-#if DEBUG
 	db_msg("batt_module_enable:%d -> %d\n", module, state);
-#endif
 	if (state)
 		module_enable_flag |= module;
 	else
@@ -743,11 +743,10 @@ static u32 acer_batt_capacity_scheme(u32 pre_chg_type, u32 chg_type,
 	static int change_counter;
 	u32 transfer_batt_capacity = 0;
 	unsigned long int delta_time = 0, change_capacity_time = 0;
-#if DEBUG
+
 	db_msg("BATT:pre_chg_type:%d chg_type:%d\n", pre_chg_type, chg_type);
 	db_msg("BATT:pre_batt_capacity:%d batt_capacity:%d\n",
 		pre_batt_capacity, batt_capacity);
-#endif
 
 	/* if chager on and is_full_charging(from smb136), charging full)*/
 	if ((chg_type != CHARGER_TYPE_NONE) && (pre_batt_capacity >= 90)) {
@@ -767,16 +766,13 @@ static u32 acer_batt_capacity_scheme(u32 pre_chg_type, u32 chg_type,
 	if (pre_chg_type != chg_type) {
 		base_battery_capacity = pre_batt_capacity;
 		transfer_batt_capacity = pre_batt_capacity;
-		pr_info("BATT:base_battery_capacity:%d\n",
-			base_battery_capacity);
+
 		change_counter = 0;
 		goto done;
 	} else {
 		current_time = current_kernel_time();
 		delta_time = current_time.tv_sec - change_time.tv_sec;
-#if DEBUG
 		db_msg("delta_time: %ld\n", delta_time);
-#endif
 
 		if (delta_time > SUSPEND_CHANGE_TIME) {
 			change_time = current_kernel_time();
@@ -792,42 +788,22 @@ static u32 acer_batt_capacity_scheme(u32 pre_chg_type, u32 chg_type,
 				/* for AC, increase 5%: 300s; for USB, increase 5%: 540s;
 				get half time: 150s and 300s to avoid gapping */
 				if (batt_table == BATT_CHG_25C_900mA)
-#ifdef CONFIG_ENABLE_ONE_PERCENT_BATTERY_STEPS
 					change_capacity_time = AC_CHANGE_TIME/5;
-#else
-					change_capacity_time = AC_CHANGE_TIME;
-#endif
 				else
-#ifdef CONFIG_ENABLE_ONE_PERCENT_BATTERY_STEPS
 					change_capacity_time = NOT_AC_CHANGE_TIME/5;
-#else
-					change_capacity_time = NOT_AC_CHANGE_TIME;
-#endif
 
 				if ((chg_type != CHARGER_TYPE_NONE) &&
 					(base_battery_capacity >= 90))
-#ifdef CONFIG_ENABLE_ONE_PERCENT_BATTERY_STEPS
 						change_capacity_time = GREATER_THAN_90_CHANGE_TIME/5;
-#else
-						change_capacity_time = GREATER_THAN_90_CHANGE_TIME;
-#endif
 
 				if ((delta_time > change_capacity_time) &&
 					((change_counter >= 2) || (change_counter <= -2))) {
 					change_time = current_kernel_time();
 
 					if (change_counter <= -2)
-#ifdef CONFIG_ENABLE_ONE_PERCENT_BATTERY_STEPS
 						transfer_batt_capacity = base_battery_capacity - 1;
-#else
-						transfer_batt_capacity = base_battery_capacity - 5;
-#endif
 					else
-#ifdef CONFIG_ENABLE_ONE_PERCENT_BATTERY_STEPS
 						transfer_batt_capacity = base_battery_capacity + 1;
-#else
-						transfer_batt_capacity = base_battery_capacity + 5;
-#endif
 
 					base_battery_capacity = transfer_batt_capacity;
 					change_counter  = 0;
@@ -842,11 +818,9 @@ static u32 acer_batt_capacity_scheme(u32 pre_chg_type, u32 chg_type,
 			}
 		}
 	}
-#if DEBUG
 	db_msg("BATT:change_count=%d, base_battery_capacity=%d\n",
 		change_counter, base_battery_capacity);
 	db_msg("transfer_batt_capacity = %d\n", transfer_batt_capacity);
-#endif
 
 filter:
 	/* Avoid capacity increasing/decreasing when not charging/charging */
@@ -900,9 +874,7 @@ static u32 msm_batt_capacity(u32 current_voltage)
 		else
 			batt_chg_case = BATT_DSG_25C_100mA;
 	}
-#if DEBUG
 	db_msg("\nbat voltage table index:%d\n", batt_chg_case);
-#endif
 
 	/* current_voltage > 10000, means the charger is connected
 	 * when power button is pressed.*/

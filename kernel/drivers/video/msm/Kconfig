@@ -1,4 +1,3 @@
-
 source "drivers/video/msm/vidc/Kconfig"
 
 config ENABLE_VSYNC
@@ -13,11 +12,11 @@ config LCD_FREQUENCY_T2
 	int "T2 value 245 <= x <= 999"
 	depends on OVERRIDE_LCD_FREQUENCY
 	default 340
-	
+
 config FIX_FPS
-	bool "Fix FPS issue"
-	depends on !ENABLE_VSYNC
-	default n
+        bool "Fix FPS issue"
+        depends on !ENABLE_VSYNC
+        default n
 
 config FB_MSM
 	tristate
@@ -31,4 +30,5 @@ config FB_MSM_LCDC
 	bool "Support for integrated LCD controller in qsd8x50"
 	depends on FB_MSM && MSM_MDP31
 	default y
+
 

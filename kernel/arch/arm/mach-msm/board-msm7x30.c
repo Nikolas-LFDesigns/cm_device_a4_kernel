@@ -3983,17 +3983,15 @@ static struct ofn_atlab_platform_data optnav_data = {
 		.motion_filter_en       = true,
 	},
 };
-
 #if !defined(CONFIG_MACH_ACER_A4)
 static int hdmi_comm_power(int on, int show);
-static int hdmi_init_irq(void);
 static int hdmi_enable_5v(int on);
+static int hdmi_init_irq(void);
 #if !defined(CONFIG_MACH_ACER_A5)
 static int hdmi_core_power(int on, int show);
 static bool hdmi_check_hdcp_hw_support(void);
 #endif
 static int hdmi_cec_power(int on);
-static bool hdmi_check_hdcp_hw_support(void);
 #if defined(CONFIG_MACH_ACER_A5)
 static int a5_hdmi_intr_detect(void);
 #endif
@@ -4040,87 +4038,21 @@ static struct tca6507_pin_config tca6507_pin[] = {
 
 static struct tca6507_platform_data tca6507_data = {
 	.pwm0 = {
-		.fade_on	= TCA6507_TIME_3,			//	Time for FadeOn
-		.fully_on = TCA6507_TIME_0,				//	Time for Keep on
-		.fade_off = TCA6507_TIME_3,				//	Time for FadeOff
-		.fir_fully_off = TCA6507_TIME_8,		//	Time for first pause
-		.sec_fully_off = TCA6507_TIME_8,		//	Time for second pause
-		.max_intensity = TCA6507_MAX_INTENSITY,	//	Intensity of Flash
-	},
-
-#if defined(CONFIG_LED_FLASH_SLOW)
-	.pwm1 = {
-		.fade_on = TCA6507_TIME_8,
+		.fade_on	= TCA6507_TIME_3,
 		.fully_on = TCA6507_TIME_0,
-		.fade_off = TCA6507_TIME_8,
-		.fir_fully_off = TCA6507_TIME_12,
-		.sec_fully_off = TCA6507_TIME_12,
-		.max_intensity = TCA6507_MAX_INTENSITY,
-	},
-#elif defined(CONFIG_LED_FLASH_NORMAL)
-	.pwm1 = {
-		.fade_on = TCA6507_TIME_7,
-		.fully_on = TCA6507_TIME_4,
-		.fade_off = TCA6507_TIME_7,
-		.fir_fully_off = TCA6507_TIME_6,
-		.sec_fully_off = TCA6507_TIME_6,
-		.max_intensity = TCA6507_MAX_INTENSITY,
-	},
-#elif defined(CONFIG_LED_FLASH_FAST)
-	.pwm1 = {
-		.fade_on = TCA6507_TIME_6,
-		.fully_on = TCA6507_TIME_4,
-		.fade_off = TCA6507_TIME_6,
-		.fir_fully_off = TCA6507_TIME_4,
-		.sec_fully_off = TCA6507_TIME_4,
-		.max_intensity = TCA6507_MAX_INTENSITY,
-	},
-#elif defined(CONFIG_LED_FLASH_SLOW2X)
-	.pwm1 = {
-		.fade_on = TCA6507_TIME_8,
-		.fully_on = TCA6507_TIME_4,
-		.fade_off = TCA6507_TIME_8,
-		.fir_fully_off = TCA6507_TIME_0,
-		.sec_fully_off = TCA6507_TIME_12,
-		.max_intensity = TCA6507_MAX_INTENSITY,
-	},
-#elif defined(CONFIG_LED_FLASH_NORMAL2X)
-	.pwm1 = {
-		.fade_on = TCA6507_TIME_7,
-		.fully_on = TCA6507_TIME_4,
-		.fade_off = TCA6507_TIME_7,
-		.fir_fully_off = TCA6507_TIME_0,
+		.fade_off = TCA6507_TIME_3,
+		.fir_fully_off = TCA6507_TIME_8,
 		.sec_fully_off = TCA6507_TIME_8,
 		.max_intensity = TCA6507_MAX_INTENSITY,
 	},
-#elif defined(CONFIG_LED_FLASH_FAST2X)
 	.pwm1 = {
-		.fade_on = TCA6507_TIME_6,
-		.fully_on = TCA6507_TIME_4,
-		.fade_off = TCA6507_TIME_6,
-		.fir_fully_off = TCA6507_TIME_0,
-		.sec_fully_off = TCA6507_TIME_6,
-		.max_intensity = TCA6507_MAX_INTENSITY,
-	},
-#elif defined(CONFIG_LED_FLASH_ALWAYS_ON)
-	.pwm1 = {
-		.fade_on = TCA6507_TIME_0,
-		.fully_on = TCA6507_TIME_12,
-		.fade_off = TCA6507_TIME_0,
-		.fir_fully_off = TCA6507_TIME_0,
-		.sec_fully_off = TCA6507_TIME_0,
-		.max_intensity = TCA6507_MAX_INTENSITY,
-	},
-#else
-	.pwm1 = {
-		.fade_on = TCA6507_TIME_8,
+		.fade_on = TCA6507_TIME_5,
 		.fully_on = TCA6507_TIME_0,
-		.fade_off = TCA6507_TIME_8,
+		.fade_off = TCA6507_TIME_5,
 		.fir_fully_off = TCA6507_TIME_12,
 		.sec_fully_off = TCA6507_TIME_12,
 		.max_intensity = TCA6507_MAX_INTENSITY,
 	},
-#endif
 	.pin_config = tca6507_pin,
 	.num_output_pins = ARRAY_SIZE(tca6507_pin),
 	.gpio_enable = 125,
@@ -5368,7 +5300,7 @@ static struct kgsl_platform_data kgsl_pdata = {
 	.min_grp2d_freq = 0,
 	.set_grp2d_async = NULL, /* HW workaround, run Z180 SYNC @ 192 MHZ */
 	.max_grp3d_freq = 245760000,
-	.min_grp3d_freq = 192000000,
+	.min_grp3d_freq = 192 * 1000*1000,
 	.set_grp3d_async = set_grp3d_async,
 	.imem_clk_name = "imem_clk",
 	.grp3d_clk_name = "grp_clk",
@@ -5913,19 +5845,12 @@ int mdp_core_clk_rate_table[] = {
 	122880000,
 	122880000,
 	122880000,
-#ifdef CONFIG_FIX_FPS
-	192000000,
-#endif
 };
 
 static struct msm_panel_common_pdata mdp_pdata = {
 	.hw_revision_addr = 0xac001270,
 	.gpio = 30,
-#ifdef CONFIG_FIX_FPS
-	.mdp_core_clk_rate = 192000000,
-#else
 	.mdp_core_clk_rate = 122880000,
-#endif
 	.mdp_core_clk_table = mdp_core_clk_rate_table,
 	.num_mdp_clk = ARRAY_SIZE(mdp_core_clk_rate_table),
 };
@@ -7093,6 +7018,8 @@ static struct platform_device *devices[] __initdata = {
 	&msm_rotator_device,
 #endif
 #if !defined(CONFIG_MACH_ACER_A5) && !defined(CONFIG_MACH_ACER_A4)
+	&mddi_toshiba_device,
+	&lcdc_toshiba_panel_device,
 	&lcdc_sharp_panel_device,
 #endif
 	&android_pmem_kernel_ebi1_device,
