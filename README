@@ -1,0 +1,11 @@
+to compile kernel:
+
+place arm-eabi-4.4.3 toolchain to home folder so you will have a path like that:
+~/arm-eabi-4.4.3/bin/arm-eabi-
+
+in terminal:
+cd kernel
+export ARCH=arm
+export CROSS_COMPILE=~/arm-eabi-4.4.3/bin/arm-eabi-
+make menuconfig
+make -j[num of cpu cores*2]
