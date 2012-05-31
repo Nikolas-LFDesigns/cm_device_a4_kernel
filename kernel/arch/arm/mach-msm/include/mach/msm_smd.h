@@ -1,7 +1,7 @@
 /* linux/include/asm-arm/arch-msm/msm_smd.h
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -20,13 +20,39 @@
 
 typedef struct smd_channel smd_channel_t;
 
-/* warning: notify() may be called before open returns */
-int smd_open(const char *name, smd_channel_t **ch, void *priv,
-	     void (*notify)(void *priv, unsigned event));
+#define SMD_MAX_CH_NAME_LEN 20 /* includes null char at end */
 
 #define SMD_EVENT_DATA 1
 #define SMD_EVENT_OPEN 2
 #define SMD_EVENT_CLOSE 3
+#define SMD_EVENT_STATUS 4
+#define SMD_EVENT_REOPEN_READY 5
+
+enum {
+	SMD_APPS_MODEM = 0,
+	SMD_APPS_QDSP,
+	SMD_MODEM_QDSP,
+	SMD_APPS_DSPS,
+	SMD_MODEM_DSPS,
+	SMD_QDSP_DSPS,
+	SMD_APPS_WCNSS,
+	SMD_MODEM_WCNSS,
+	SMD_QDSP_WCNSS,
+	SMD_DSPS_WCNSS,
+	SMD_APPS_Q6FW,
+	SMD_MODEM_Q6FW,
+	SMD_QDSP_Q6FW,
+	SMD_DSPS_Q6FW,
+	SMD_WCNSS_Q6FW,
+	SMD_NUM_TYPE,
+	SMD_LOOPBACK_TYPE = 100,
+
+};
+
+#ifdef CONFIG_MSM_SMD
+/* warning: notify() may be called before open returns */
+int smd_open(const char *name, smd_channel_t **ch, void *priv,
+	     void (*notify)(void *priv, unsigned event));
 
 int smd_close(smd_channel_t *ch);
 
@@ -71,18 +97,8 @@ int smd_wait_until_writable(smd_channel_t *ch, int bytes);
  */
 int smd_tiocmget(smd_channel_t *ch);
 int smd_tiocmset(smd_channel_t *ch, unsigned int set, unsigned int clear);
-
-enum {
-	SMD_APPS_MODEM = 0,
-	SMD_APPS_QDSP,
-	SMD_MODEM_QDSP,
-	SMD_APPS_DSPS,
-	SMD_MODEM_DSPS,
-	SMD_QDSP_DSPS,
-	SMD_LOOPBACK_TYPE = 100,
-
-};
-
+int
+smd_tiocmset_from_cb(smd_channel_t *ch, unsigned int set, unsigned int clear);
 int smd_named_open_on_edge(const char *name, uint32_t edge, smd_channel_t **_ch,
 			   void *priv, void (*notify)(void *, unsigned));
 
@@ -102,5 +118,151 @@ void smd_enable_read_intr(smd_channel_t *ch);
  * called.
  */
 void smd_disable_read_intr(smd_channel_t *ch);
+
+/* Starts a packet transaction.  The size of the packet may exceed the total
+ * size of the smd ring buffer.
+ *
+ * @ch: channel to write the packet to
+ * @len: total length of the packet
+ *
+ * Returns:
+ *      0 - success
+ *      -ENODEV - invalid smd channel
+ *      -EACCES - non-packet channel specified
+ *      -EINVAL - invalid length
+ *      -EBUSY - transaction already in progress
+ *      -EAGAIN - no enough memory in ring buffer to start transaction
+ *      -EPERM - unable to sucessfully start transaction due to write error
+ */
+int smd_write_start(smd_channel_t *ch, int len);
+
+/* Writes a segment of the packet for a packet transaction.
+ *
+ * @ch: channel to write packet to
+ * @data: buffer of data to write
+ * @len: length of data buffer
+ * @user_buf: (0) - buffer from kernelspace    (1) - buffer from userspace
+ *
+ * Returns:
+ *      number of bytes written
+ *      -ENODEV - invalid smd channel
+ *      -EINVAL - invalid length
+ *      -ENOEXEC - transaction not started
+ */
+int smd_write_segment(smd_channel_t *ch, void *data, int len, int user_buf);
+
+/* Completes a packet transaction.  Do not call from interrupt context.
+ *
+ * @ch: channel to complete transaction on
+ *
+ * Returns:
+ *      0 - success
+ *      -ENODEV - invalid smd channel
+ *      -E2BIG - some ammount of packet is not yet written
+ */
+int smd_write_end(smd_channel_t *ch);
+
+#else
+
+static inline int smd_open(const char *name, smd_channel_t **ch, void *priv,
+	     void (*notify)(void *priv, unsigned event))
+{
+	return -ENODEV;
+}
+
+static inline int smd_close(smd_channel_t *ch)
+{
+	return -ENODEV;
+}
+
+static inline int smd_read(smd_channel_t *ch, void *data, int len)
+{
+	return -ENODEV;
+}
+
+static inline int smd_read_from_cb(smd_channel_t *ch, void *data, int len)
+{
+	return -ENODEV;
+}
+
+static inline int smd_read_user_buffer(smd_channel_t *ch, void *data, int len)
+{
+	return -ENODEV;
+}
+
+static inline int smd_write(smd_channel_t *ch, const void *data, int len)
+{
+	return -ENODEV;
+}
+
+static inline int
+smd_write_user_buffer(smd_channel_t *ch, const void *data, int len)
+{
+	return -ENODEV;
+}
+
+static inline int smd_write_avail(smd_channel_t *ch)
+{
+	return -ENODEV;
+}
+
+static inline int smd_read_avail(smd_channel_t *ch)
+{
+	return -ENODEV;
+}
+
+static inline int smd_cur_packet_size(smd_channel_t *ch)
+{
+	return -ENODEV;
+}
+
+static inline int smd_tiocmget(smd_channel_t *ch)
+{
+	return -ENODEV;
+}
+
+static inline int
+smd_tiocmset(smd_channel_t *ch, unsigned int set, unsigned int clear)
+{
+	return -ENODEV;
+}
+
+static inline int
+smd_tiocmset_from_cb(smd_channel_t *ch, unsigned int set, unsigned int clear)
+{
+	return -ENODEV;
+}
+
+static inline int
+smd_named_open_on_edge(const char *name, uint32_t edge, smd_channel_t **_ch,
+			   void *priv, void (*notify)(void *, unsigned))
+{
+	return -ENODEV;
+}
+
+static inline void smd_enable_read_intr(smd_channel_t *ch)
+{
+}
+
+static inline void smd_disable_read_intr(smd_channel_t *ch)
+{
+}
+
+static inline int smd_write_start(smd_channel_t *ch, int len)
+{
+	return -ENODEV;
+}
+
+static inline int
+smd_write_segment(smd_channel_t *ch, void *data, int len, int user_buf)
+{
+	return -ENODEV;
+}
+
+static inline int smd_write_end(smd_channel_t *ch)
+{
+	return -ENODEV;
+}
+#endif
 
 #endif

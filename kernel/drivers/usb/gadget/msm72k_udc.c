@@ -141,14 +141,10 @@ static void usb_do_remote_wakeup(struct work_struct *w);
 #define USB_FLAG_SUSPEND        0x0010
 #define USB_FLAG_CONFIGURED     0x0020
 
+
 #define USB_CHG_DET_DELAY	msecs_to_jiffies(1000)
 #define REMOTE_WAKEUP_DELAY	msecs_to_jiffies(1000)
 #define PHY_STATUS_CHECK_DELAY	(jiffies + msecs_to_jiffies(1000))
-
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-/*For composite switch judgement*/
-int usb_cable_plug;
-#endif
 
 struct usb_info {
 	/* lock for register/queue/device state changes */
@@ -224,22 +220,17 @@ struct usb_info {
 static const struct usb_ep_ops msm72k_ep_ops;
 static struct usb_info *the_usb_info;
 
+/*< DTS2011081905895 sunwenyong 20110819 begin*/
+#ifdef CONFIG_HUAWEI_KERNEL
+static struct wake_lock charger_wlock;
+#endif
+/*< DTS2011081905895 sunwenyong 20110819 end*/  
 static int msm72k_wakeup(struct usb_gadget *_gadget);
 static int msm72k_pullup_internal(struct usb_gadget *_gadget, int is_active);
 static int msm72k_set_halt(struct usb_ep *_ep, int value);
 static void flush_endpoint(struct msm_endpoint *ept);
 static void usb_reset(struct usb_info *ui);
 static int usb_ept_set_halt(struct usb_ep *_ep, int value);
-
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-extern void batt_chg_type_notify_callback(uint8_t);
-static struct wake_lock delay_wlock;
-static void wake_unlock_delay(struct wake_lock *lock)
-{
-	wake_lock_timeout(&delay_wlock, HZ);  // keep 1 second
-	wake_unlock(lock);
-}
-#endif
 
 static void msm_hsusb_set_speed(struct usb_info *ui)
 {
@@ -437,10 +428,6 @@ static void usb_chg_detect(struct work_struct *w)
 	spin_unlock_irqrestore(&ui->lock, flags);
 
 	atomic_set(&otg->chg_type, temp);
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-	batt_chg_type_notify_callback((uint8_t)temp);
-#endif
-
 	maxpower = usb_get_max_power(ui);
 	if (maxpower > 0)
 		otg_set_power(ui->xceiv, maxpower);
@@ -454,11 +441,13 @@ static void usb_chg_detect(struct work_struct *w)
 	 * */
 	if (temp == USB_CHG_TYPE__WALLCHARGER) {
 		pm_runtime_put_sync(&ui->pdev->dev);
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-		wake_unlock_delay(&ui->wlock);
-#else
 		wake_unlock(&ui->wlock);
-#endif
+		/*< DTS2011081905895 sunwenyong 20110819 begin*/
+		#ifdef CONFIG_HUAWEI_KERNEL
+		wake_lock(&charger_wlock);		
+		printk(KERN_ERR "%s:lock charger_wlock\n",__func__);
+		#endif
+		/*< DTS2011081905895 sunwenyong 20110819 end*/  
 	}
 }
 
@@ -1235,6 +1224,8 @@ static void flush_endpoint(struct msm_endpoint *ept)
 	flush_endpoint_sw(ept);
 }
 
+
+
 static irqreturn_t usb_interrupt(int irq, void *data)
 {
 	struct usb_info *ui = data;
@@ -1328,19 +1319,10 @@ static irqreturn_t usb_interrupt(int irq, void *data)
 
 		spin_lock_irqsave(&ui->lock, flags);
 		ui->usb_state = USB_STATE_SUSPENDED;
-		ui->flags = USB_FLAG_SUSPEND;
 		spin_unlock_irqrestore(&ui->lock, flags);
 
 		ui->driver->suspend(&ui->gadget);
 		schedule_work(&ui->work);
-#ifdef CONFIG_USB_OTG
-		/* notify otg for
-		 * 1. kicking A_BIDL_ADIS timer in case of A-peripheral
-		 * 2. disabling pull-up and kicking B_ASE0_RST timer
-		 */
-		if (ui->gadget.b_hnp_enable || ui->gadget.is_a_peripheral)
-			otg_set_suspend(ui->xceiv, 1);
-#endif
 	}
 
 	if (n & STS_UI) {
@@ -1576,9 +1558,6 @@ static void usb_do_work(struct work_struct *w)
 				spin_unlock_irqrestore(&ui->lock, iflags);
 
 
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-				batt_chg_type_notify_callback((uint8_t)USB_CHG_TYPE__INVALID);
-#endif
 				/* if charger is initialized to known type
 				 * we must let modem know about charger
 				 * disconnection
@@ -1594,14 +1573,24 @@ static void usb_do_work(struct work_struct *w)
 				switch_set_state(&ui->sdev, 0);
 
 				ui->state = USB_STATE_OFFLINE;
+/*  DTS2011020901627 hanfeng 20110216 end > */
 				usb_do_work_check_vbus(ui);
 				pm_runtime_put_noidle(&ui->pdev->dev);
 				pm_runtime_suspend(&ui->pdev->dev);
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-				wake_unlock_delay(&ui->wlock);
-#else
 				wake_unlock(&ui->wlock);
-#endif
+				/*<DTS2010121301427 renjun 20101213 begin */
+				//import DTS2010061000370 modification
+				/*wake up after 1s*/
+				#ifdef CONFIG_HUAWEI_KERNEL
+				wake_lock_timeout(&ui->wlock, 1*HZ);
+				#endif
+				/*DTS2010121301427 renjun 20101213 end > */
+				/*< DTS2011081905895 sunwenyong 20110819 begin*/
+				#ifdef CONFIG_HUAWEI_KERNEL
+				wake_unlock(&charger_wlock);				
+				printk(KERN_ERR "%s:unlock charger_wlock\n",__func__);
+				#endif
+				/*< DTS2011081905895 sunwenyong 20110819 end*/  
 				break;
 			}
 			if (flags & USB_FLAG_SUSPEND) {
@@ -1616,12 +1605,10 @@ static void usb_do_work(struct work_struct *w)
 				 * is not implemented as of now
 				 * */
 				if (release_wlocks)
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-					wake_unlock_delay(&ui->wlock);
-#else
 					wake_unlock(&ui->wlock);
-#endif
 
+              /*< DTS2010080503130 hanfeng 20100820 begin*/
+              /* DTS2010080503130 hanfeng 20100820 end >*/   
 				/* TBD: Initiate LPM at usb bus suspend */
 				break;
 			}
@@ -2383,12 +2370,24 @@ static ssize_t show_usb_chg_type(struct device *dev,
 
 	return count;
 }
+
+/*< updata QC2030 USB yanzhijun 20101105 begin */
+/* updata QC2030 USB yanzhijun 20101105 end >*/
+
 static DEVICE_ATTR(wakeup, S_IWUSR, 0, usb_remote_wakeup);
 static DEVICE_ATTR(usb_state, S_IRUSR, show_usb_state, 0);
 static DEVICE_ATTR(usb_speed, S_IRUSR, show_usb_speed, 0);
 static DEVICE_ATTR(chg_type, S_IRUSR, show_usb_chg_type, 0);
 static DEVICE_ATTR(chg_current, S_IWUSR | S_IRUSR,
 		show_usb_chg_current, store_usb_chg_current);
+
+/*< DTS2011030202829 genghua 20110318 begin */
+/* we changed the permissions of these files and directories 
+ * the meet the requirements of Android Gingerbread CTS tests
+ */  
+/*< updata QC2030 USB yanzhijun 20101105 begin */
+/* updata QC2030 USB yanzhijun 20101105 end >*/
+/* DTS2011030202829 genghua 20110318 end >*/
 
 #ifdef CONFIG_USB_OTG
 static ssize_t store_host_req(struct device *dev,
@@ -2497,11 +2496,14 @@ static int msm72k_probe(struct platform_device *pdev)
 
 	wake_lock_init(&ui->wlock,
 			WAKE_LOCK_SUSPEND, "usb_bus_active");
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-	wake_lock_init(&delay_wlock,
-			WAKE_LOCK_SUSPEND, "usb_bus_delay");
-#endif
 
+	/*< DTS2011081905895 sunwenyong 20110819 begin*/
+	#ifdef CONFIG_HUAWEI_KERNEL
+	/*wakelock for charger, prevent arm11 enter sleep.avoid mobile dump.*/
+	wake_lock_init(&charger_wlock, WAKE_LOCK_SUSPEND,"charger_active");
+	printk(KERN_ERR "%s:wakelock init \n",__func__);
+	#endif
+	/*< DTS2011081905895 sunwenyong 20110819 end*/  
 	usb_debugfs_init(ui);
 
 	usb_prepare(ui);
@@ -2522,9 +2524,12 @@ static int msm72k_probe(struct platform_device *pdev)
 			__func__, retval);
 		switch_dev_unregister(&ui->sdev);
 		wake_lock_destroy(&ui->wlock);
-#if defined(CONFIG_MACH_ACER_A5) || defined(CONFIG_MACH_ACER_A4)
-		wake_lock_destroy(&delay_wlock);
-#endif
+		/*< DTS2011081905895 sunwenyong 20110819 begin*/
+		#ifdef CONFIG_HUAWEI_KERNEL
+		wake_lock_destroy(&charger_wlock);
+		printk(KERN_ERR "%s:wakelock distroy \n",__func__);
+		#endif
+		/*< DTS2011081905895 sunwenyong 20110819 end*/  
 		return usb_free(ui, retval);
 	}
 
@@ -2612,6 +2617,8 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 
 	dev_dbg(&ui->pdev->dev, "registered gadget driver '%s'\n",
 			driver->driver.name);
+/*< updata QC2030 USB yanzhijun 20101105 begin */
+/* updata QC2030 USB yanzhijun 20101105 end >*/
 	usb_start(ui);
 
 	return 0;
@@ -2645,6 +2652,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	device_remove_file(&dev->gadget.dev, &dev_attr_usb_speed);
 	device_remove_file(&dev->gadget.dev, &dev_attr_chg_type);
 	device_remove_file(&dev->gadget.dev, &dev_attr_chg_current);
+/*< updata QC2030 USB yanzhijun 20101105 begin */
+/* updata QC2030 USB yanzhijun 20101105 end >*/
 	driver->disconnect(&dev->gadget);
 	driver->unbind(&dev->gadget);
 	dev->gadget.dev.driver = NULL;

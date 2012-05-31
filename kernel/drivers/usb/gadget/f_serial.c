@@ -162,10 +162,15 @@ static struct usb_endpoint_descriptor gser_fs_out_desc = {
 static struct usb_descriptor_header *gser_fs_function[] = {
 	(struct usb_descriptor_header *) &gser_interface_desc,
 #ifdef CONFIG_MODEM_SUPPORT
+/*< DTS2010061200263 lixiangyu and yanzhijun 20100612 begin */
+/* add new pid config for google */
+#ifndef CONFIG_USB_AUTO_INSTALL
 	(struct usb_descriptor_header *) &gser_header_desc,
 	(struct usb_descriptor_header *) &gser_call_mgmt_descriptor,
 	(struct usb_descriptor_header *) &gser_descriptor,
 	(struct usb_descriptor_header *) &gser_union_desc,
+#endif
+/* DTS2010061200263 lixiangyu and yanzhijun 20100612 end >*/
 	(struct usb_descriptor_header *) &gser_fs_notify_desc,
 #endif
 	(struct usb_descriptor_header *) &gser_fs_in_desc,
@@ -202,10 +207,15 @@ static struct usb_endpoint_descriptor gser_hs_out_desc = {
 static struct usb_descriptor_header *gser_hs_function[] = {
 	(struct usb_descriptor_header *) &gser_interface_desc,
 #ifdef CONFIG_MODEM_SUPPORT
+/*< DTS2010061200263 lixiangyu and yanzhijun 20100612 begin */
+/* add new pid config for google */
+#ifndef CONFIG_USB_AUTO_INSTALL
 	(struct usb_descriptor_header *) &gser_header_desc,
 	(struct usb_descriptor_header *) &gser_call_mgmt_descriptor,
 	(struct usb_descriptor_header *) &gser_descriptor,
 	(struct usb_descriptor_header *) &gser_union_desc,
+#endif
+/* DTS2010061200263 lixiangyu and yanzhijun 20100612 end >*/
 	(struct usb_descriptor_header *) &gser_hs_notify_desc,
 #endif
 	(struct usb_descriptor_header *) &gser_hs_in_desc,

@@ -27,16 +27,7 @@ struct android_usb_function {
 };
 
 struct android_usb_product {
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
-	/* Vendor ID for this set of functions.
-	 * Default vendor_id in platform data will be used if this is zero.
-	 */
-	__u16 vendor_id;
-
-	/* Product ID for this set of functions. */
-#else
 	/* Default product ID. */
-#endif
 	__u16 product_id;
 
 	/* List of function names associated with this product.
@@ -100,7 +91,7 @@ struct usb_ether_platform_data {
 
 extern void android_register_function(struct android_usb_function *f);
 
-extern void android_enable_function(struct usb_function *f, int enable);
+extern int android_enable_function(struct usb_function *f, int enable);
 
 
 #endif	/* __LINUX_USB_ANDROID_H */
