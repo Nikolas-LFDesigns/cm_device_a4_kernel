@@ -77,9 +77,8 @@
 #include <mach/vreg.h>
 #include "devices.h"
 #include "timer.h"
-#ifdef CONFIG_USB_ANDROID
 #include <linux/usb/android_composite.h>
-#endif
+
 #if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 #include <linux/usb/f_accessory.h>
 #endif
@@ -3561,9 +3560,6 @@ static char *usb_functions_default[] = {
 	"diag",
 	"modem",
 	"nmea",
-#ifdef CONFIG_USB_ANDROID_RMNET
-	"rmnet",
-#endif
 	"usb_mass_storage",
 };
 
@@ -3572,9 +3568,6 @@ static char *usb_functions_default_adb[] = {
 	"adb",
 	"modem",
 	"nmea",
-#ifdef CONFIG_USB_ANDROID_RMNET
-	"rmnet",
-#endif
 	"usb_mass_storage",
 };
 
@@ -3603,23 +3596,18 @@ static char *usb_functions_rndis_adb[] = {
 static char *usb_functions_rndis_diag[] = {
 	"rndis",
 	"diag",
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 	"modem",
 	"nmea",
-#endif
 };
 
 static char *usb_functions_rndis_adb_diag[] = {
 	"rndis",
 	"diag",
 	"adb",
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 	"modem",
 	"nmea",
-#endif
 };
 
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 static char *usb_functions_accessory[] = {
 	"accessory",
 };
@@ -3627,80 +3615,40 @@ static char *usb_functions_accessory_adb[] = {
 	"accessory",
 	"adb",
 };
-#endif
 
 static char *usb_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis",
-#endif
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 	"accessory",
-#endif
-#ifdef CONFIG_USB_ANDROID_DIAG
 	"diag",
-#endif
 	"adb",
-#ifdef CONFIG_USB_F_SERIAL
 	"modem",
 	"nmea",
-#endif
-#ifdef CONFIG_USB_ANDROID_RMNET
-	"rmnet",
-#endif
 	"usb_mass_storage",
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-#endif
 };
 
 static struct android_usb_product usb_products[] = {
 	{
-#if defined(CONFIG_MACH_ACER_A4)
 		.product_id     = 0x3318,
-#elif defined(CONFIG_MACH_ACER_A5)
-		.product_id     = 0x331E,
-#else
-		.product_id     = 0x9026,
-#endif
 		.num_functions	= ARRAY_SIZE(usb_functions_default),
 		.functions      = usb_functions_default,
 	},
 	{
-#if defined(CONFIG_MACH_ACER_A4)
 		.product_id     = 0x3317,
-#elif defined(CONFIG_MACH_ACER_A5)
-		.product_id     = 0x331D,
-#else
-		.product_id     = 0x9025,
-#endif
 		.num_functions	= ARRAY_SIZE(usb_functions_default_adb),
 		.functions	= usb_functions_default_adb,
 	},
 	{
 		/* RNDIS + DIAG */
-#if defined(CONFIG_MACH_ACER_A4)
 		.product_id     = 0x331A,
-#elif defined(CONFIG_MACH_ACER_A5)
-		.product_id     = 0x3320,
-#else
-		.product_id     = 0x902C,
-#endif
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis_diag),
 		.functions	= usb_functions_rndis_diag,
 	},
 	{
 		/* RNDIS + ADB + DIAG */
-#if defined(CONFIG_MACH_ACER_A4)
 		.product_id     = 0x3319,
-#elif defined(CONFIG_MACH_ACER_A5)
-		.product_id     = 0x331F,
-#else
-		.product_id     = 0x902D,
-#endif
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis_adb_diag),
 		.functions	= usb_functions_rndis_adb_diag,
 	},
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 	{
 		.vendor_id      = USB_ACCESSORY_VENDOR_ID,
 		.product_id     = USB_ACCESSORY_PRODUCT_ID,
@@ -3713,7 +3661,6 @@ static struct android_usb_product usb_products[] = {
 		.num_functions  = ARRAY_SIZE(usb_functions_accessory_adb),
 		.functions      = usb_functions_accessory_adb,
 	},
-#endif
 };
 
 static struct android_usb_product fusion_usb_products[] = {
@@ -3740,16 +3687,8 @@ static struct android_usb_product fusion_usb_products[] = {
 };
 
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-#if defined(CONFIG_MACH_ACER_A5)
-	.nluns		= 2,
-#else
 	.nluns		= 1,
-#endif
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 	.vendor		= "Acer Incorporated",
-#else
-	.vendor		= "Qualcomm Incorporated",
-#endif
 	.product        = "Mass storage",
 	.release	= 0x0100,
 	.can_stall	= 1,
@@ -3766,13 +3705,8 @@ static struct platform_device usb_mass_storage_device = {
 
 static struct usb_ether_platform_data rndis_pdata = {
 	/* ethaddr is filled by board_serialno_setup */
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 	.vendorID	= 0x0502,
 	.vendorDescr	= "Acer Incorporated",
-#else
-	.vendorID	= 0x05C6,
-	.vendorDescr	= "Qualcomm Incorporated",
-#endif
 };
 
 static struct platform_device rndis_device = {
@@ -3784,25 +3718,12 @@ static struct platform_device rndis_device = {
 };
 
 static struct android_usb_platform_data android_usb_pdata = {
-#if defined(CONFIG_MACH_ACER_A4)
 	.vendor_id	= 0x0502,
 	.product_id	= 0x3318,
-#elif defined(CONFIG_MACH_ACER_A5)
-	.vendor_id	= 0x0502,
-	.product_id	= 0x331E,
-#else
-	.vendor_id	= 0x05C6,
-	.product_id	= 0x9026,
-#endif
 
 	.version	= 0x0100,
-#if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 	.product_name		= "Acer HSUSB Device",
 	.manufacturer_name	= "Acer Incorporated",
-#else
-	.product_name		= "Qualcomm HSUSB Device",
-	.manufacturer_name	= "Qualcomm Incorporated",
-#endif
 	.num_products = ARRAY_SIZE(usb_products),
 	.products = usb_products,
 	.num_functions = ARRAY_SIZE(usb_functions_all),
@@ -7033,9 +6954,7 @@ static struct platform_device *devices[] __initdata = {
 #ifdef CONFIG_USB_ANDROID
 	&usb_mass_storage_device,
 	&rndis_device,
-#ifdef CONFIG_USB_ANDROID_DIAG
 	&usb_diag_device,
-#endif
 	&android_usb_device,
 #endif
 	&qsd_device_spi,
