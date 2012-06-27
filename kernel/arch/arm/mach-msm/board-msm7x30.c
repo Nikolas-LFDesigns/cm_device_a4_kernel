@@ -77,8 +77,9 @@
 #include <mach/vreg.h>
 #include "devices.h"
 #include "timer.h"
+#ifdef CONFIG_USB_ANDROID
 #include <linux/usb/android_composite.h>
-
+#endif
 #if defined(CONFIG_MACH_ACER_A4) || defined(CONFIG_MACH_ACER_A5)
 #include <linux/usb/f_accessory.h>
 #endif
