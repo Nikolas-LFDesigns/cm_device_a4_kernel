@@ -21,6 +21,7 @@
 #include <linux/netfilter/xt_qtaguid.h>
 #include <linux/skbuff.h>
 #include <linux/workqueue.h>
+#include <linux/miscdevice.h>
 #include <net/addrconf.h>
 #include <net/sock.h>
 #include <net/tcp.h>
@@ -30,7 +31,6 @@
 #include "xt_qtaguid_internal.h"
 #include "xt_qtaguid_print.h"
 
-#define pr_warn_once printk
 /*
  * We only use the xt_socket funcs within a similar context to avoid unexpected
  * return values.
@@ -103,6 +103,7 @@ static bool qtu_proc_handling_passive;
 module_param_named(tag_tracking_passive, qtu_proc_handling_passive, bool,
 		   S_IRUGO | S_IWUSR);
 
+ 
 #define QTU_DEV_NAME "xt_qtaguid"
 
 uint qtaguid_debug_mask = DEFAULT_DEBUG_MASK;
@@ -223,7 +224,7 @@ static DEFINE_SPINLOCK(tag_counter_set_list_lock);
 
 static struct rb_root uid_tag_data_tree = RB_ROOT;
 static DEFINE_SPINLOCK(uid_tag_data_tree_lock);
-
+ 
 static struct rb_root proc_qtu_data_tree = RB_ROOT;
 /* No proc_qtu_data_tree_lock; use uid_tag_data_tree_lock */
 
@@ -240,7 +241,7 @@ static bool can_impersonate_uid(uid_t uid)
 {
 	return uid == current_fsuid() || can_manipulate_uids();
 }
-
+ 
 static bool can_read_other_uid_stats(uid_t uid)
 {
 	/* root pwnd */
@@ -290,6 +291,7 @@ static struct tag_node *tag_node_tree_search(struct rb_root *root, tag_t tag)
 		RB_DEBUG("qtaguid: tag_node_tree_search(0x%llx): "
 			 " data.tag=0x%llx (uid=%u) res=%d\n",
 			 tag, data->tag, get_uid_from_tag(data->tag), result);
+
 		if (result < 0)
 			node = node->rb_left;
 		else if (result > 0)
@@ -310,9 +312,9 @@ static void tag_node_tree_insert(struct tag_node *data, struct rb_root *root)
 						 node);
 		int result = tag_compare(data->tag, this->tag);
 		RB_DEBUG("qtaguid: %s(): tag=0x%llx"
-			 " (uid=%u)\n", __func__,
-			 this->tag,
-			 get_uid_from_tag(this->tag));
+			" (uid=%u)\n", __func__,
+			this->tag,
+			get_uid_from_tag(this->tag));
 		parent = *new;
 		if (result < 0)
 			new = &((*new)->rb_left);
@@ -787,7 +789,7 @@ static int iface_stat_all_proc_read(char *page, char **num_items_returned,
 	int len;
 	struct iface_stat *iface_entry;
 	const struct net_device_stats *stats;
-	struct rtnl_link_stats64 no_dev_stats = {0};
+	struct net_device_stats no_dev_stats = {0};
 
 	if (unlikely(module_passive)) {
 		*eof = 1;
@@ -888,16 +890,14 @@ static void _iface_stat_set_active(struct iface_stat *entry,
 		entry->net_dev = net_dev;
 		entry->active = true;
 		IF_DEBUG("qtaguid: %s(%s): "
-			 "enable tracking. rfcnt=%d\n", __func__,
-			 entry->ifname,
-			 percpu_read(*net_dev->pcpu_refcnt));
+			 "enable tracking.\n", __func__,
+			 entry->ifname);
 	} else {
 		entry->active = false;
 		entry->net_dev = NULL;
 		IF_DEBUG("qtaguid: %s(%s): "
-			 "disable tracking. rfcnt=%d\n", __func__,
-			 entry->ifname,
-			 percpu_read(*net_dev->pcpu_refcnt));
+			 "disable tracking.\n", __func__,
+			 entry->ifname);
 
 	}
 }
@@ -966,11 +966,11 @@ static void iface_check_stats_reset_and_adjust(struct net_device *net_dev,
 		 stats->rx_bytes, stats->tx_bytes,
 		 iface->active, iface->last_known_valid, stats_rewound);
 
-	if (iface->active && iface->last_known_valid && stats_rewound) {
-		pr_warn_once("qtaguid: iface_stat: %s(%s): "
-			     "iface reset its stats unexpectedly\n", __func__,
-			     net_dev->name);
+	WARN_ONCE((iface->active && iface->last_known_valid && stats_rewound),
+		"qtaguid: iface_stat: %s(%s): "
+		"iface reset its stats unexpectedly\n", __func__, net_dev->name);
 
+	if (iface->active && iface->last_known_valid && stats_rewound) {
 		iface->totals[IFS_TX].bytes += iface->last_known[IFS_TX].bytes;
 		iface->totals[IFS_TX].packets +=
 			iface->last_known[IFS_TX].packets;
@@ -1493,7 +1493,7 @@ err:
 }
 
 static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
-				    struct xt_action_param *par)
+				    const struct xt_action_param *par)
 {
 	struct sock *sk;
 	unsigned int hook_mask = (1 << par->hooknum);
@@ -1509,7 +1509,7 @@ static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
 		return NULL;
 
 	switch (par->family) {
-#ifdef XT_SOCKET_HAVE_IPV6
+#if defined(CONFIG_IP6_NF_IPTABLES) || defined(CONFIG_IP6_NF_IPTABLES_MODULE)
 	case NFPROTO_IPV6:
 		sk = xt_socket_get6_sk(skb, par);
 		break;
@@ -1539,7 +1539,7 @@ static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
 
 static void account_for_uid(const struct sk_buff *skb,
 			    const struct sock *alternate_sk, uid_t uid,
-			    struct xt_action_param *par)
+			    const struct xt_action_param *par)
 {
 	const struct net_device *el_dev;
 
@@ -2187,16 +2187,14 @@ static int ctrl_cmd_tag(const char *input)
 		 * At first, we want to catch user-space code that is not
 		 * opening the /dev/xt_qtaguid.
 		 */
-		if (IS_ERR_OR_NULL(pqd_entry))
-			pr_warn_once(
-				"qtaguid: %s(): "
-				"User space forgot to open /dev/xt_qtaguid? "
-				"pid=%u tgid=%u uid=%u\n", __func__,
-				current->pid, current->tgid,
-				current_fsuid());
-		else
+		WARN_ONCE(IS_ERR_OR_NULL(pqd_entry),
+			  "qtaguid: User space forgot to open /dev/xt_qtaguid? "
+			  "pid=%u tgid=%u uid=%u\n",
+			  current->pid, current->tgid, current_fsuid());
+		if (!IS_ERR_OR_NULL(pqd_entry)) {
 			list_add(&sock_tag_entry->list,
 				 &pqd_entry->sock_tag_list);
+		}
 		spin_unlock_bh(&uid_tag_data_tree_lock);
 
 		sock_tag_tree_insert(sock_tag_entry, &sock_tag_tree);
@@ -2276,12 +2274,11 @@ static int ctrl_cmd_untag(const char *input)
 	 * At first, we want to catch user-space code that is not
 	 * opening the /dev/xt_qtaguid.
 	 */
-	if (IS_ERR_OR_NULL(pqd_entry))
-		pr_warn_once("qtaguid: %s(): "
-			     "User space forgot to open /dev/xt_qtaguid? "
-			     "pid=%u tgid=%u uid=%u\n", __func__,
-			     current->pid, current->tgid, current_fsuid());
-	else
+	WARN_ONCE(IS_ERR_OR_NULL(pqd_entry),
+		  "qtaguid: User space forgot to open /dev/xt_qtaguid? "
+		  "pid=%u tgid=%u uid=%u\n",
+		  current->pid, current->tgid, current_fsuid());
+	if (!IS_ERR_OR_NULL(pqd_entry))
 		list_del(&sock_tag_entry->list);
 	spin_unlock_bh(&uid_tag_data_tree_lock);
 	/*
@@ -2299,7 +2296,6 @@ static int ctrl_cmd_untag(const char *input)
 		 input, sock_tag_entry,
 		 atomic_long_read(&el_socket->file->f_count) - 1);
 	sockfd_put(el_socket);
-
 	kfree(sock_tag_entry);
 	atomic64_inc(&qtu_events.sockets_untagged);
 
@@ -2311,7 +2307,6 @@ err_put:
 	/* Release the sock_fd that was grabbed by sockfd_lookup(). */
 	sockfd_put(el_socket);
 	return res;
-
 err:
 	CT_DEBUG("qtaguid: ctrl_untag(%s): done.\n", input);
 	return res;
@@ -2409,7 +2404,7 @@ static int pp_stats_line(struct proc_print_info *ppi, int cnt_set)
 				 "from pid=%u tgid=%u uid=%u\n",
 				 ppi->iface_entry->ifname,
 				 get_atag_from_tag(tag), stat_uid,
-				 current->pid, current->tgid, current_fsuid());
+			  current->pid, current->tgid, current_fsuid());
 			return 0;
 		}
 		if (ppi->item_index++ < ppi->items_to_skip)
@@ -2785,3 +2780,4 @@ MODULE_ALIAS("ipt_owner");
 MODULE_ALIAS("ip6t_owner");
 MODULE_ALIAS("ipt_qtaguid");
 MODULE_ALIAS("ip6t_qtaguid");
+
