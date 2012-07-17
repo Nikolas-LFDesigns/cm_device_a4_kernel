@@ -3,6 +3,9 @@ to compile kernel:
 place arm-eabi-4.4.3 toolchain to home folder so you will have a path like that:
 ~/arm-eabi-4.4.3/bin/arm-eabi-
 
+my config named as acer - acer_a4_defconfig and located at /kernel/arch/arm/configs/acer_a4_defconfig
+you should place it as .config in root of kernel folder to make kernel compile for a4.
+
 in terminal:
 cd kernel
 export ARCH=arm
