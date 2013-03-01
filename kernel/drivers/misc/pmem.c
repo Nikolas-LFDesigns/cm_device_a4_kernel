@@ -1561,7 +1561,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	int ret = 0, id = get_id(file);
 
 	if (!data) {
-		pr_err("pmem: Invalid file descriptor, no private data\n");
+		/*pr_err(*/printk(KERN_ERR "pmem: Invalid file descriptor, no private data\n");
 		return -EINVAL;
 	}
 #if PMEM_DEBUG_MSGS
@@ -1572,7 +1572,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		get_name(file), id);
 	if (vma->vm_pgoff || !PMEM_IS_PAGE_ALIGNED(vma_size)) {
 #if PMEM_DEBUG
-		pr_err("pmem: mmaps must be at offset zero, aligned"
+		/*pr_err(*/printk(KERN_ERR "pmem: mmaps must be at offset zero, aligned"
 				" and a multiple of pages_size.\n");
 #endif
 		return -EINVAL;
@@ -1585,7 +1585,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 	    (data->flags & PMEM_FLAGS_SUBMAP) ||
 	    (data->flags & PMEM_FLAGS_UNSUBMAP)) {
 #if PMEM_DEBUG
-		pr_err("pmem: you can only mmap a pmem file once, "
+		/*pr_err(*/printk(KERN_ERR "pmem: you can only mmap a pmem file once, "
 		       "this file is already mmaped. %x\n", data->flags);
 #endif
 		ret = -EINVAL;
@@ -1600,7 +1600,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		mutex_unlock(&pmem[id].arena_mutex);
 		/* either no space was available or an error occured */
 		if (index == -1) {
-			pr_err("pmem: mmap unable to allocate memory"
+			/*pr_err(*/printk(KERN_ERR "pmem: mmap unable to allocate memory"
 				"on %s\n", get_name(file));
 			ret = -ENOMEM;
 			goto error;
@@ -1611,7 +1611,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 
 	if (pmem[id].len(id, data) < vma_size) {
 #if PMEM_DEBUG
-		pr_err("pmem: mmap size [%lu] does not match"
+		/*pr_err(*/printk(KERN_ERR "pmem: mmap size [%lu] does not match"
 		       " size of backing region [%lu].\n", vma_size,
 		       pmem[id].len(id, data));
 #endif
@@ -1655,7 +1655,7 @@ static int pmem_mmap(struct file *file, struct vm_area_struct *vma)
 		     current->pid);
 	} else {
 		if (pmem_map_pfn_range(id, vma, data, 0, vma_size)) {
-			pr_err("pmem: mmap failed in kernel!\n");
+			/*pr_err(*/printk(KERN_ERR "pmem: mmap failed in kernel!\n");
 			ret = -EAGAIN;
 			goto error;
 		}
@@ -1686,7 +1686,7 @@ int get_pmem_user_addr(struct file *file, unsigned long *start,
 			} else {
 				*start = *len = 0;
 #if PMEM_DEBUG
-				pr_err("pmem: %s: no vma present.\n",
+				/*pr_err(*/printk(KERN_ERR "pmem: %s: no vma present.\n",
 					__func__);
 #endif
 			}
@@ -1697,7 +1697,7 @@ int get_pmem_user_addr(struct file *file, unsigned long *start,
 
 #if PMEM_DEBUG
 	if (ret)
-		pr_err("pmem: %s: requested pmem data from invalid"
+		/*pr_err(*/printk(KERN_ERR "pmem: %s: requested pmem data from invalid"
 			"file.\n", __func__);
 #endif
 	return ret;
@@ -1743,7 +1743,7 @@ int get_pmem_file(unsigned int fd, unsigned long *start, unsigned long *vstart,
 	struct file *file = fget(fd);
 
 	if (unlikely(file == NULL)) {
-		pr_err("pmem: %s: requested data from file "
+		/*pr_err(*/printk(KERN_ERR "pmem: %s: requested data from file "
 			"descriptor that doesn't exist.\n", __func__);
 	} else {
 #if PMEM_DEBUG_MSGS
@@ -2098,7 +2098,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 	struct file *src_file;
 
 	if (!file) {
-		pr_err("pmem: %s: NULL file pointer passed in, "
+		/*pr_err(*/printk(KERN_ERR "pmem: %s: NULL file pointer passed in, "
 			"bailing out!\n", __func__);
 		ret = -EINVAL;
 		goto leave;
@@ -2107,20 +2107,20 @@ static int pmem_connect(unsigned long connect, struct file *file)
 	src_file = fget_light(connect, &put_needed);
 
 	if (!src_file) {
-		pr_err("pmem: %s: src file not found!\n", __func__);
+		/*pr_err(*/printk(KERN_ERR "pmem: %s: src file not found!\n", __func__);
 		ret = -EBADF;
 		goto leave;
 	}
 
 	if (src_file == file) { /* degenerative case, operator error */
-		pr_err("pmem: %s: src_file and passed in file are "
+		/*pr_err(*/printk(KERN_ERR "pmem: %s: src_file and passed in file are "
 			"the same; refusing to connect to self!\n", __func__);
 		ret = -EINVAL;
 		goto put_src_file;
 	}
 
 	if (unlikely(!is_pmem_file(src_file))) {
-		pr_err("pmem: %s: src file is not a pmem file!\n",
+		/*pr_err(*/printk(KERN_ERR "pmem: %s: src file is not a pmem file!\n",
 			__func__);
 		ret = -EINVAL;
 		goto put_src_file;
@@ -2128,7 +2128,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 		struct pmem_data *src_data = src_file->private_data;
 
 		if (!src_data) {
-			pr_err("pmem: %s: src file pointer has no"
+			/*pr_err(*/printk(KERN_ERR "pmem: %s: src file pointer has no"
 				"private data, bailing out!\n", __func__);
 			ret = -EINVAL;
 			goto put_src_file;
@@ -2138,7 +2138,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 
 		if (unlikely(!has_allocation(src_file))) {
 			up_read(&src_data->sem);
-			pr_err("pmem: %s: src file has no allocation!\n",
+			/*pr_err(*/printk(KERN_ERR "pmem: %s: src file has no allocation!\n",
 				__func__);
 			ret = -EINVAL;
 		} else {
@@ -2149,7 +2149,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 
 			data = file->private_data;
 			if (!data) {
-				pr_err("pmem: %s: passed in file "
+				/*pr_err(*/printk(KERN_ERR "pmem: %s: passed in file "
 					"pointer has no private data, bailing"
 					" out!\n", __func__);
 				ret = -EINVAL;
@@ -2161,7 +2161,7 @@ static int pmem_connect(unsigned long connect, struct file *file)
 					(data->index != src_index)) {
 				up_write(&data->sem);
 
-				pr_err("pmem: %s: file is already "
+				/*pr_err(*/printk(KERN_ERR "pmem: %s: file is already "
 					"mapped but doesn't match this "
 					"src_file!\n", __func__);
 				ret = -EINVAL;
@@ -2267,7 +2267,7 @@ int pmem_remap(struct pmem_region *region, struct file *file,
 
 	if (!is_pmem_file(file)) {
 #if PMEM_DEBUG
-		pr_err("pmem: remap request for non-pmem file descriptor\n");
+		/*pr_err(*/printk(KERN_ERR "pmem: remap request for non-pmem file descriptor\n");
 #endif
 		return -EINVAL;
 	}
@@ -2279,7 +2279,7 @@ int pmem_remap(struct pmem_region *region, struct file *file,
 	if (unlikely(!PMEM_IS_PAGE_ALIGNED(region->offset) ||
 		 !PMEM_IS_PAGE_ALIGNED(region->len))) {
 #if PMEM_DEBUG
-		pr_err("pmem: request for unaligned pmem"
+		/*pr_err(*/printk(KERN_ERR "pmem: request for unaligned pmem"
 			"suballocation %lx %lx\n",
 			region->offset, region->len);
 #endif
@@ -2299,7 +2299,7 @@ int pmem_remap(struct pmem_region *region, struct file *file,
 	 * that back in it */
 	if (!is_master_owner(file)) {
 #if PMEM_DEBUG
-		pr_err("pmem: remap requested from non-master process\n");
+		/*pr_err(*/printk(KERN_ERR "pmem: remap requested from non-master process\n");
 #endif
 		ret = -EINVAL;
 		goto err;
@@ -2310,7 +2310,7 @@ int pmem_remap(struct pmem_region *region, struct file *file,
 		     (region->len > pmem[id].len(id, data)) ||
 		     (region->offset + region->len > pmem[id].len(id, data)))) {
 #if PMEM_DEBUG
-		pr_err("pmem: suballoc doesn't fit in src_file!\n");
+		/*pr_err(*/printk(KERN_ERR "pmem: suballoc doesn't fit in src_file!\n");
 #endif
 		ret = -EINVAL;
 		goto err;
@@ -2343,7 +2343,7 @@ int pmem_remap(struct pmem_region *region, struct file *file,
 		}
 		if (!found) {
 #if PMEM_DEBUG
-			pr_err("pmem: Unmap region does not map any"
+			/*pr_err(*/printk(KERN_ERR "pmem: Unmap region does not map any"
 				" mapped region!");
 #endif
 			ret = -EINVAL;
@@ -2525,7 +2525,7 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			DLOG("allocate, id %d\n", id);
 			down_write(&data->sem);
 			if (has_allocation(file)) {
-				pr_err("pmem: Existing allocation found on "
+				/*pr_err(*/printk(KERN_ERR "pmem: Existing allocation found on "
 					"this file descrpitor\n");
 				up_write(&data->sem);
 				return -EINVAL;
@@ -2552,28 +2552,28 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			DLOG("allocate id align %d %u\n", id, alloc.align);
 			down_write(&data->sem);
 			if (has_allocation(file)) {
-				pr_err("pmem: Existing allocation found on "
+				/*pr_err(*/printk(KERN_ERR "pmem: Existing allocation found on "
 					"this file descrpitor\n");
 				up_write(&data->sem);
 				return -EINVAL;
 			}
 
 			if (alloc.align & (alloc.align - 1)) {
-				pr_err("pmem: Alignment is not a power of 2\n");
+				/*pr_err(*/printk(KERN_ERR "pmem: Alignment is not a power of 2\n");
 				return -EINVAL;
 			}
 
 			if (alloc.align != SZ_4K &&
 					(pmem[id].allocator_type !=
 						PMEM_ALLOCATORTYPE_BITMAP)) {
-				pr_err("pmem: Non 4k alignment requires bitmap"
+				/*pr_err(*/printk(KERN_ERR "pmem: Non 4k alignment requires bitmap"
 					" allocator on %s\n", pmem[id].name);
 				return -EINVAL;
 			}
 
 			if (alloc.align > SZ_1M ||
 				alloc.align < SZ_4K) {
-				pr_err("pmem: Invalid Alignment (%u) "
+				/*pr_err(*/printk(KERN_ERR "pmem: Invalid Alignment (%u) "
 					"specified\n", alloc.align);
 				return -EINVAL;
 			}
@@ -3056,7 +3056,7 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 		(pmem[id].allocator_type != PMEM_ALLOCATORTYPE_SYSTEM)) {
 		ioremap_pmem(id);
 		if (pmem[id].vbase == 0) {
-			pr_err("pmem: ioremap failed for device %s\n",
+			/*pr_err(*/printk(KERN_ERR "pmem: ioremap failed for device %s\n",
 				pmem[id].name);
 			goto error_cant_remap;
 		}
@@ -3144,7 +3144,7 @@ static int __init pmem_init(void)
 	pmem_kset = kset_create_and_add(PMEM_SYSFS_DIR_NAME,
 		NULL, kernel_kobj);
 	if (!pmem_kset) {
-		pr_err("pmem(%s):kset_create_and_add fail\n", __func__);
+		/*pr_err(*/printk(KERN_ERR "pmem(%s):kset_create_and_add fail\n", __func__);
 		return -ENOMEM;
 	}
 

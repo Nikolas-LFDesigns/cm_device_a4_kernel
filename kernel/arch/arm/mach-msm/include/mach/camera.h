@@ -30,11 +30,11 @@
 #include <media/msm_camera.h>
 
 #define CONFIG_MSM_CAMERA_DEBUG
-#ifdef CONFIG_MSM_CAMERA_DEBUG
-#define CDBG(fmt, args...) pr_debug(fmt, ##args)
-#else
-#define CDBG(fmt, args...) do { } while (0)
-#endif
+//#ifdef CONFIG_MSM_CAMERA_DEBUG
+#define CDBG(fmt, args...) pr_err(fmt, ##args)
+//#else
+//#define CDBG(fmt, args...) do { } while (0)
+//#endif
 
 #define MSM_CAMERA_MSG 0
 #define MSM_CAMERA_EVT 1

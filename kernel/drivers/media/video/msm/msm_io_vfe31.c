@@ -155,13 +155,13 @@ void __iomem *camifpadbase, *csibase;
 
 void msm_io_w(u32 data, void __iomem *addr)
 {
-	CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
+	//CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
 	writel((data), (addr));
 }
 
 void msm_io_w_mb(u32 data, void __iomem *addr)
 {
-	CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
+	//CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
 	wmb();
 	writel((data), (addr));
 	wmb();
@@ -170,7 +170,7 @@ void msm_io_w_mb(u32 data, void __iomem *addr)
 u32 msm_io_r(void __iomem *addr)
 {
 	uint32_t data = readl(addr);
-	CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
+	//CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
 	return data;
 }
 
@@ -180,7 +180,7 @@ u32 msm_io_r_mb(void __iomem *addr)
 	rmb();
 	data = readl(addr);
 	rmb();
-	CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
+	//CDBG("%s: %08x %08x\n", __func__, (int) (addr), (data));
 	return data;
 }
 
