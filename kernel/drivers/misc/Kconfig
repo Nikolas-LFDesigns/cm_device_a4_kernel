@@ -320,7 +320,7 @@ config SENSORS_TSL2550
 	  This driver can also be built as a module.  If so, the module
 	  will be called tsl2550.
 
-config SENSORS_AK8975
+config SENSORS_AK8975B
 	tristate "AK8975 compass support"
 	default n
 	depends on I2C
